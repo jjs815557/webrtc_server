@@ -1,116 +1,39 @@
-// server.js
-const path = require("path");
-const express = require("express");
-const http = require("http");
-const socketIO = require("socket.io");
-const cors = require("cors");
-const app = express();
-const server = http.createServer(app);
-const io = socketIO(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-  },
-});
+const app = require("express")();
+const { Server } = require("socket.io");
+const port = 3000;
 
-const PORT = process.env.PORT || 3000;
+//-----------------------------------------------------//
+async function server() {
+  const http = require("http").createServer(app);
+  const io = new Server(http, { transports: ["websocket"] });
 
-app.use(cors());
-app.use(express.static(path.join(__dirname, "./public")));
+  const roomName = "room1234";
 
-io.on("connection", (socket) => {
-  console.log("Client connected");
+  io.on("connection", (socket) => {
+    console.log("socket connected");
+    socket.on("join", () => {
+      //클라이언트의 roomName을 받아서 처리해도됨
+      socket.join(roomName);
+      socket.to(roomName).emit("joined");
+    });
+    socket.on("offer", (offer) => {
+      socket.to(roomName).emit("offer", offer);
+    });
 
-  socket.on("messageFromClient", (data) => {
-    console.log("Message from client:", data);
-    // Broadcasting the message to all connected clients
-    io.emit("messageFromServer", data);
+    socket.on("offer", (offer) => {
+      socket.to(roomName).emit("offer", offer);
+    });
+    socket.on("answer", (answer) => {
+      socket.to(roomName).emit("answer", answer);
+    });
+    socket.on("ice", (ice) => {
+      socket.to(roomName).emit("ice", ice);
+    });
   });
 
-  socket.on("disconnect", () => {
-    console.log("Client disconnected");
+  http.listen(port, () => {
+    console.log("server open!");
   });
-});
+}
 
-server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
-// const cors = require("cors");
-
-// let io = require("socket.io")(http, {
-//   cors: {
-//     origin: "*",
-//     methods: ["GET", "POST"],
-//   },
-// });
-
-// app.use(cors());
-
-// io.on("connection", (socket) => {
-//   console.log("socket", socket.id);
-
-//   console.log("user roomname : ", socket.id);
-//   socket.on("connect", (data) => {
-//     print(data);
-//   });
-// });
-
-// http.listen(port, () => {
-//   console.log(`server is runing port ${port}`);
-// });
-
-// let port = process.env.PORT || 5000;
-
-/**
- *
- */
-// let IO = require("socket.io")(port, {
-//   cors: {
-//     origin: "*",
-//     methods: ["GET", "POST"],
-//   },
-// });
-
-// IO.use((socket, next) => {
-//   if (socket.handshake.query) {
-//     let callerId = socket.handshake.query.callerId;
-//     socket.user = callerId;
-//     next();
-//   }
-// });
-
-// IO.on("connection", (socket) => {
-//   console.log(socket.user, "Connected");
-
-//   socket.join(socket.user);
-
-//   socket.on("makeCall", (data) => {
-//     let calleeId = data.calleeId;
-//     let sdpOffer = data.sdpOffer;
-
-//     socket.to(calleeId).emit("newCall", {
-//       callerId: socket.user,
-//       sdpOffer: sdpOffer,
-//     });
-//   });
-
-//   socket.on("answerCall", (data) => {
-//     let callerId = data.callerId;
-//     let sdpAnswer = data.sdpAnswer;
-
-//     socket.to(callerId).emit("callAnswered", {
-//       callee: socket.user,
-//       sdpAnswer: sdpAnswer,
-//     });
-//   });
-
-//   socket.on("IceCandidate", (data) => {
-//     let calleeId = data.calleeId;
-//     let iceCandidate = data.iceCandidate;
-
-//     socket.to(calleeId).emit("IceCandidate", {
-//       sender: socket.user,
-//       iceCandidate: iceCandidate,
-//     });
-//   });
-// });
+server();
